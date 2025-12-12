@@ -1,37 +1,69 @@
 package base;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Round {
-    private Offer offer;
-    
-    public Round() {
-        this.offer = new Offer();
+    private List<Offer> offers;
+    private Deck deck;
+    private List<Player> players;
+
+    public Round(Deck deck, List<Player> players) {
+        this.deck = deck;
+        this.players = players;
+        this.offers = new ArrayList<>();
     }
-    
-    public void dealCard() {
-        // Deal a card to each player
+
+    public void dealCards() {
+        for (Player player : players) {
+            Card card1 = deck.drawCard();
+            Card card2 = deck.drawCard();
+            if (card1 != null) player.addCardToHand(card1);
+            if (card2 != null) player.addCardToHand(card2);
+        }
     }
-    
-    public void makeOffer() {
-        // Create and manage an offer
+
+    public void makeOffers() {
+        offers.clear();
+        for (Player player : players) {
+            Offer offer = player.makeOffer();
+            if (offer != null) {
+                offers.add(offer);
+            }
+        }
     }
-    
-    public void takeOffer() {
-        // Accept the current offer
+
+    public void takeOffers() {
+        for (Player player : players) {
+            if (!offers.isEmpty()) {
+                Offer selectedOffer = player.getStrategy().selectOffer(offers);
+                boolean takeFaceUp = player.getStrategy().chooseCard(selectedOffer);
+                player.takeOffer(selectedOffer, takeFaceUp);
+            }
+        }
     }
-    
-    public void collectLeftoverCard() {
-        // Collect cards that were not taken
+
+    public void collectLeftoverCards() {
+        for (Offer offer : offers) {
+            Card remaining = offer.getRemainingCard();
+            if (remaining != null && offer.getOwner() != null) {
+                offer.getOwner().getJest().addCard(remaining);
+            }
+        }
     }
-    
+
     public void prepareNextRound() {
-        // Reset state for the next round
+        offers.clear();
+        for (Player player : players) {
+            player.clearHand();
+        }
     }
-    
-    public Offer getOffer() {
-        return offer;
+
+    public List<Offer> getOffers() {
+        return offers;
     }
-    
-    public void setOffer(Offer offer) {
-        this.offer = offer;
+
+    public void setOffers(List<Offer> offers) {
+        this.offers = offers;
     }
 }

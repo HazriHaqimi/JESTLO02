@@ -1,6 +1,6 @@
 import java.util.Random;
 
-package Strategy.TypeStrategy;
+package strategy.typestrategy;
 
 
 public class DefensiveStrategy {
