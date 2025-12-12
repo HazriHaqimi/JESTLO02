@@ -18,5 +18,8 @@ public abstract class AIStrategy implements PlayStrategy {
     @Override
     public abstract Offer selectOffer(List<Offer> offers);
 
+    @Override
+    public abstract boolean chooseCard(Offer offer);
+
     public abstract void evaluateOffer(Offer offer);
 }

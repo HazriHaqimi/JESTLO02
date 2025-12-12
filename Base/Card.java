@@ -1,21 +1,13 @@
-public class Card {
-    private int value;
-    private String suit;
+package base;
 
-    public Card(int value, String suit) {
-        this.value = value;
-        this.suit = suit;
-    }
+import visitor.ScoreVisitor;
 
-    public int getValue() {
-        return value;
-    }
-
-    public String getSuit() {
-        return suit;
-    }
-
-    public void accept(ScoreVisitor visitor) {
-        visitor.visit(this);
-    }
+public abstract class Card {
+    
+    public abstract void accept(ScoreVisitor visitor);
+    
+    public abstract int getValue();
+    
+    @Override
+    public abstract String toString();
 }

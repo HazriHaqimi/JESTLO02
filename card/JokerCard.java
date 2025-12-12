@@ -19,6 +19,11 @@ public class JokerCard extends Card {
     }
 
     @Override
+    public int getValue() {
+        return baseValue;
+    }
+
+    @Override
     public void accept(ScoreVisitor visitor) {
         visitor.visit(this);
     }
