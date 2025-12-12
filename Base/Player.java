@@ -1,34 +1,50 @@
-public class Player {
-   
-    private String name;
-    private Hand hand;
-    private Jest jest;
-    private Strategy strategy;
+package base;
 
-    public Player(String name, Strategy strategy) {
+import strategy.PlayStrategy;
+import visitor.ScoreVisitor;
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class Player {
+    protected String name;
+    protected List<Card> hand;
+    protected Jest jest;
+    protected PlayStrategy strategy;
+
+    public Player(String name, PlayStrategy strategy) {
         this.name = name;
         this.strategy = strategy;
-        this.hand = new Hand();
+        this.hand = new ArrayList<>();
+        this.jest = new Jest();
     }
 
-    public void makeOffer() {
-        // Make an offer based on strategy
+    public abstract Offer makeOffer();
+
+    public void takeOffer(Offer offer, boolean takeFaceUp) {
+        Card card = offer.selectCard(takeFaceUp);
+        if (card != null) {
+            jest.addCard(card);
+        }
     }
 
-    public void takeOffer(Object offer) {
-        // Handle received offer
-    }
-    
-     public void calculateFinalScore(ScoreVisitor visitor, int score) {
-        visitor.visit(this, score);
+    public int calculateFinalScore(ScoreVisitor visitor) {
+        jest.accept(visitor);
+        return visitor.getTotalScore();
     }
 
-    // Getters and setters
+    public void addCardToHand(Card card) {
+        hand.add(card);
+    }
+
+    public void clearHand() {
+        hand.clear();
+    }
+
     public String getName() {
         return name;
     }
 
-    public Hand getHand() {
+    public List<Card> getHand() {
         return hand;
     }
 
@@ -40,7 +56,11 @@ public class Player {
         this.jest = jest;
     }
 
-    public Strategy getStrategy() {
+    public PlayStrategy getStrategy() {
         return strategy;
+    }
+
+    public void setStrategy(PlayStrategy strategy) {
+        this.strategy = strategy;
     }
 }
