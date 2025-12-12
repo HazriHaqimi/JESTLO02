@@ -7,12 +7,29 @@ import card.SuitCard;
 import strategy.AIStrategy;
 import java.util.List;
 
+/**
+ * Defensive AI strategy for virtual players.
+ * Prioritizes hiding high-value cards and being cautious.
+ * 
+ * @author JEST Team
+ * @version 1.0
+ */
 public class DefensiveStrategy extends AIStrategy {
 
+    /**
+     * Creates a defensive strategy.
+     */
     public DefensiveStrategy() {
         super();
     }
 
+    /**
+     * Creates an offer by hiding the higher value card.
+     * Shows the lower value card face-up to minimize opponent gains.
+     * 
+     * @param player The player making the offer
+     * @return The created offer
+     */
     @Override
     public Offer chooseOffer(Player player) {
         if (player.getHand().size() >= 2) {
@@ -36,6 +53,13 @@ public class DefensiveStrategy extends AIStrategy {
         return null;
     }
 
+    /**
+     * Selects the offer with the lowest face-up card value.
+     * Tries to minimize risk by taking known low-value cards.
+     * 
+     * @param offers List of available offers
+     * @return The offer with lowest visible card
+     */
     @Override
     public Offer selectOffer(List<Offer> offers) {
         Offer bestOffer = null;
@@ -53,15 +77,32 @@ public class DefensiveStrategy extends AIStrategy {
         return bestOffer != null ? bestOffer : offers.get(random.nextInt(offers.size()));
     }
 
+    /**
+     * Takes the face-up card (predictable choice).
+     * 
+     * @param offer The offer to take from
+     * @return true (takes face-up)
+     */
     @Override
     public boolean chooseCard(Offer offer) {
         return true;
     }
 
+    /**
+     * Evaluates an offer (no-op for defensive strategy).
+     * 
+     * @param offer The offer to evaluate
+     */
     @Override
     public void evaluateOffer(Offer offer) {
     }
 
+    /**
+     * Gets the value of a card for comparison.
+     * 
+     * @param card The card to evaluate
+     * @return The card's value, or 0 for Joker
+     */
     private int getCardValue(Card card) {
         if (card instanceof SuitCard) {
             return ((SuitCard) card).getValue();
