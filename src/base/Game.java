@@ -10,12 +10,17 @@ import properties.Suit;
 import properties.Numbers;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * Main game controller for the JEST card game.
  * Manages players, deck, trophies, rounds, and scoring.
+ * 
+ * Game flow:
+ * 1. Setup: Initialize players, deck, draw trophy cards
+ * 2. Rounds: Deal 2 cards, make offers, take cards (repeat until deck empty)
+ * 3. Final: Collect remaining offer cards, calculate scores, award trophies
  * 
  * @author JEST Team
  * @version 1.0
@@ -33,11 +38,11 @@ public class Game {
     /** Number of players (3 or 4) */
     private int numberOfPlayers;
     
-    /** Scanner for user input */
-    private Scanner scanner;
-    
     /** Current round number */
     private int roundNumber;
+    
+    /** Cards remaining from previous round's offers */
+    private List<Card> previousRoundLeftovers;
 
     /**
      * Trophy types based on card conditions.
@@ -62,8 +67,8 @@ public class Game {
         this.numberOfPlayers = numberOfPlayers;
         this.players = new ArrayList<>();
         this.trophies = new ArrayList<>();
-        this.scanner = new Scanner(System.in);
         this.roundNumber = 0;
+        this.previousRoundLeftovers = new ArrayList<>();
     }
 
     /**
@@ -82,29 +87,31 @@ public class Game {
             System.out.println("- " + trophy.getCondition());
         }
         
+        // Play rounds until deck is empty
         while (canPlayRound()) {
-            startRound();
+            playRound();
         }
         
-        collectFinalCards();
         endGame();
     }
 
     /**
      * Checks if another round can be played.
+     * Need at least 2 cards per player.
      * 
      * @return true if deck has enough cards for all players
      */
     private boolean canPlayRound() {
-        return deck.size() >= numberOfPlayers * 2;
+        int availableCards = deck.size() + previousRoundLeftovers.size();
+        return availableCards >= numberOfPlayers * 2;
     }
 
     /**
      * Initializes players based on user input.
      */
     private void initializePlayers() {
-        System.out.println("\nEnter name for Human Player: ");
-        String humanName = scanner.nextLine();
+        System.out.print("\nEnter name for Human Player: ");
+        String humanName = InputHandler.getString();
         if (humanName.isEmpty()) humanName = "Player 1";
         players.add(new HumanPlayer(humanName));
         
@@ -142,7 +149,7 @@ public class Game {
                 Trophy trophy = createTrophyFromCard(trophyCard);
                 if (trophy != null) {
                     trophies.add(trophy);
-                    System.out.println("Trophy card drawn: " + trophyCard);
+                    System.out.println("Trophy card drawn: " + trophyCard + " -> " + trophy.getCondition());
                 }
             }
         }
@@ -157,7 +164,7 @@ public class Game {
      */
     private Trophy createTrophyFromCard(Card card) {
         if (card instanceof JokerCard) {
-            return new Trophy("Lowest card value in strongest suit (1)", 
+            return new Trophy("Lowest value 1 card in strongest suit", 
                 TrophyType.JOKER, card);
         }
         
@@ -173,7 +180,7 @@ public class Game {
                         
                 case DIAMOND:
                     if (number == Numbers.ACE) {
-                        return new Trophy("Highest value 4 cards", 
+                        return new Trophy("Majority 4s - Player with most 4-value cards", 
                             TrophyType.MAJORITY_4, card);
                     } else if (number == Numbers.TWO) {
                         return new Trophy("Highest Heart - Player with highest Heart", 
@@ -189,7 +196,7 @@ public class Game {
                     
                 case CLUB:
                     if (number == Numbers.ACE) {
-                        return new Trophy("Highest value 4 cards", 
+                        return new Trophy("Majority 4s - Player with most 4-value cards", 
                             TrophyType.MAJORITY_4, card);
                     } else if (number == Numbers.TWO) {
                         return new Trophy("Lowest Heart - Player with lowest Heart", 
@@ -227,57 +234,91 @@ public class Game {
     /**
      * Plays a single round of the game.
      */
-    public void startRound() {
+    private void playRound() {
         roundNumber++;
-        System.out.println("\n========== ROUND " + roundNumber + " ==========");
-        Round round = new Round(deck, players);
+        System.out.println("\n========================================");
+        System.out.println("            ROUND " + roundNumber);
+        System.out.println("========================================");
         
-        round.dealCards();
-        System.out.println("Cards dealt to all players.");
+        // Prepare cards for this round
+        List<Card> roundCards = new ArrayList<>();
+        
+        // Add leftover cards from previous round
+        roundCards.addAll(previousRoundLeftovers);
+        previousRoundLeftovers.clear();
+        
+        // Add cards from deck
+        int cardsNeeded = (numberOfPlayers * 2) - roundCards.size();
+        for (int i = 0; i < cardsNeeded && !deck.isEmpty(); i++) {
+            roundCards.add(deck.drawCard());
+        }
+        
+        // Shuffle and deal
+        Collections.shuffle(roundCards);
         
         for (Player player : players) {
-            if (player instanceof HumanPlayer) {
-                System.out.println(player.getName() + "'s hand: " + player.getHand());
-            } else {
-                System.out.println(player.getName() + "'s hand: [hidden]");
+            player.clearHand();
+            if (roundCards.size() >= 2) {
+                player.addCardToHand(roundCards.remove(0));
+                player.addCardToHand(roundCards.remove(0));
             }
         }
         
+        System.out.println("Cards dealt to all players.");
+        System.out.println("Remaining in deck: " + deck.size());
+        
+        // Create round and make offers
+        Round round = new Round(deck, players);
         round.makeOffers();
-        System.out.println("\nOffers made by all players:");
+        
+        System.out.println("\n--- Offers Made ---");
         for (Offer offer : round.getOffers()) {
-            System.out.println(offer.getOwner().getName() + ": Face-up = " + offer.getFaceUp() + ", Face-down = [hidden]");
+            System.out.println("  " + offer.getOwner().getName() + ": Face-up = " + offer.getFaceUp());
         }
         
+        // Take cards phase
+        System.out.println("\n--- Taking Cards ---");
         round.takeOffers();
         
-        round.collectLeftoverCards();
-        
-        System.out.println("\nCurrent Jests:");
+        // Show current Jest status
+        System.out.println("\n--- Current Jests ---");
         for (Player player : players) {
-            System.out.println(player.getName() + ": " + player.getJest().getCards());
+            System.out.println("  " + player.getName() + " (" + player.getJest().size() + " cards): " + 
+                player.getJest().getCards());
         }
         
-        round.prepareNextRound();
-    }
-
-    /**
-     * Collects final remaining cards at end of game.
-     */
-    private void collectFinalCards() {
-        System.out.println("\n=== Game Over - All rounds completed ===");
+        // Get leftover cards
+        previousRoundLeftovers = round.getLeftoverCards();
+        System.out.println("\nCards remaining on table: " + previousRoundLeftovers);
+        
+        // If deck is empty, this is final round - collect remaining cards
+        if (deck.isEmpty()) {
+            System.out.println("\n=== DECK EMPTY - FINAL COLLECTION ===");
+            for (Offer offer : round.getOffers()) {
+                Card remaining = offer.getRemainingCard();
+                if (remaining != null && offer.getOwner() != null) {
+                    offer.getOwner().getJest().addCard(remaining);
+                    System.out.println(offer.getOwner().getName() + " added final card: " + remaining);
+                }
+            }
+            previousRoundLeftovers.clear();
+        }
     }
 
     /**
      * Computes and displays scores for all players.
      */
     public void computeScore() {
+        System.out.println("\n=== Final Jests ===");
+        for (Player player : players) {
+            System.out.println(player.getName() + "'s Jest: " + player.getJest().getCards());
+        }
+        
         System.out.println("\n=== Final Scores ===");
         for (Player player : players) {
             FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
             int score = player.calculateFinalScore(visitor);
-            System.out.println(player.getName() + "'s Jest: " + player.getJest().getCards());
-            System.out.println(player.getName() + "'s Score: " + score);
+            System.out.println(player.getName() + ": " + score + " points");
         }
     }
 
@@ -304,7 +345,10 @@ public class Game {
         computeScore();
         awardTrophy();
         
-        System.out.println("\n=== Final Results ===");
+        System.out.println("\n========================================");
+        System.out.println("           FINAL RESULTS");
+        System.out.println("========================================");
+        
         Player winner = null;
         int highestScore = Integer.MIN_VALUE;
         
@@ -312,7 +356,15 @@ public class Game {
             FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
             int score = player.calculateFinalScore(visitor);
             
-            System.out.println(player.getName() + ": Score = " + score);
+            int trophiesWon = 0;
+            for (Trophy trophy : trophies) {
+                if (trophy.getWinner() == player) {
+                    trophiesWon++;
+                }
+            }
+            
+            System.out.println(player.getName() + ": " + score + " points, " + 
+                trophiesWon + " trophy(ies)");
             
             if (score > highestScore) {
                 highestScore = score;
@@ -323,6 +375,8 @@ public class Game {
         if (winner != null) {
             System.out.println("\n*** " + winner.getName() + " WINS with " + highestScore + " points! ***");
         }
+        
+        InputHandler.close();
     }
 
     /**

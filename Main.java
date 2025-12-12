@@ -1,5 +1,5 @@
 import base.Game;
-import java.util.Scanner;
+import base.InputHandler;
 
 /**
  * Main entry point for the JEST card game.
@@ -20,8 +20,6 @@ public class Main {
      * @param args Command line arguments (not used)
      */
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        
         System.out.println("======================================");
         System.out.println("         JEST CARD GAME");
         System.out.println("       By Brett J. Gilbert");
@@ -38,12 +36,7 @@ public class Main {
         int numberOfPlayers = 0;
         while (numberOfPlayers < 3 || numberOfPlayers > 4) {
             System.out.print("Enter number of players (3 or 4): ");
-            if (scanner.hasNextInt()) {
-                numberOfPlayers = scanner.nextInt();
-                scanner.nextLine();
-            } else {
-                scanner.nextLine();
-            }
+            numberOfPlayers = InputHandler.getInt();
             
             if (numberOfPlayers < 3 || numberOfPlayers > 4) {
                 System.out.println("Invalid number. Please enter 3 or 4.");
@@ -54,6 +47,5 @@ public class Main {
         game.startGame();
         
         System.out.println("\nThank you for playing JEST!");
-        scanner.close();
     }
 }
