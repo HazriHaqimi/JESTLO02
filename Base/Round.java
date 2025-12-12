@@ -8,7 +8,9 @@ import java.util.List;
 
 /**
  * Represents a single round in the JEST game.
- * Each round consists of dealing cards, making offers, taking cards, and collecting leftovers.
+ * Each round: deal 2 cards, make offers, take turns taking 1 card each.
+ * At end of round, each player has taken exactly 1 card to their Jest.
+ * Remaining offer cards stay on table until next round or final collection.
  * 
  * @author JEST Team
  * @version 1.0
@@ -23,8 +25,8 @@ public class Round {
     /** List of players in this round */
     private List<Player> players;
     
-    /** Order in which players take turns */
-    private List<Player> turnOrder;
+    /** Players who have already taken a card this round */
+    private List<Player> playersWhoTook;
 
     /**
      * Creates a new round.
@@ -36,7 +38,7 @@ public class Round {
         this.deck = deck;
         this.players = players;
         this.offers = new ArrayList<>();
-        this.turnOrder = new ArrayList<>();
+        this.playersWhoTook = new ArrayList<>();
     }
 
     /**
@@ -52,7 +54,7 @@ public class Round {
     }
 
     /**
-     * Has each player make their offer.
+     * Has each player make their offer (1 face-up, 1 face-down).
      */
     public void makeOffers() {
         offers.clear();
@@ -65,71 +67,159 @@ public class Round {
     }
 
     /**
-     * Processes card taking phase.
-     * Players take turns based on highest face-up card.
+     * Processes card taking phase according to JEST rules:
+     * 1. Player with highest face-up card goes first
+     * 2. Must take from ANOTHER player's complete offer
+     * 3. The player whose offer was taken from goes next
+     * 4. If that player already took, highest remaining face-up goes
+     * 5. Final player can take from own offer if it's the only complete one
      */
     public void takeOffers() {
-        determineTurnOrder();
+        playersWhoTook.clear();
         
-        List<Player> playersWhoTookTurn = new ArrayList<>();
+        // Find first player (highest face-up card)
+        Player currentPlayer = findPlayerWithHighestFaceUp(getPlayersWithCompleteOffers());
         
-        for (Player currentPlayer : turnOrder) {
-            List<Offer> availableOffers = getAvailableOffers(currentPlayer, playersWhoTookTurn);
+        while (playersWhoTook.size() < players.size()) {
+            if (currentPlayer == null) {
+                break;
+            }
+            
+            System.out.println("\n" + currentPlayer.getName() + "'s turn to take a card.");
+            
+            // Get available offers (complete offers from other players, or own if last)
+            List<Offer> availableOffers = getAvailableOffersFor(currentPlayer);
             
             if (availableOffers.isEmpty()) {
+                System.out.println(currentPlayer.getName() + " has no available offers to take from.");
+                playersWhoTook.add(currentPlayer);
+                currentPlayer = findNextPlayer(null);
                 continue;
             }
             
-            if (availableOffers.size() == 1 && availableOffers.get(0).getOwner() == currentPlayer) {
-                Offer ownOffer = availableOffers.get(0);
-                if (ownOffer.isComplete()) {
-                    boolean takeFaceUp = currentPlayer.getStrategy().chooseCard(ownOffer);
-                    currentPlayer.takeOffer(ownOffer, takeFaceUp);
-                    System.out.println(currentPlayer.getName() + " took from their own offer (only option with 2 cards)");
+            // Select and take from an offer
+            Offer selectedOffer;
+            if (availableOffers.size() == 1) {
+                selectedOffer = availableOffers.get(0);
+                if (selectedOffer.getOwner() == currentPlayer) {
+                    System.out.println(currentPlayer.getName() + " must take from their own offer (only complete offer).");
                 }
             } else {
-                List<Offer> otherOffers = new ArrayList<>();
-                for (Offer o : availableOffers) {
-                    if (o.getOwner() != currentPlayer && o.isComplete()) {
-                        otherOffers.add(o);
-                    }
-                }
-                
-                if (!otherOffers.isEmpty()) {
-                    Offer selectedOffer = currentPlayer.getStrategy().selectOffer(otherOffers);
-                    boolean takeFaceUp = currentPlayer.getStrategy().chooseCard(selectedOffer);
-                    currentPlayer.takeOffer(selectedOffer, takeFaceUp);
-                    System.out.println(currentPlayer.getName() + " took a card from " + selectedOffer.getOwner().getName() + "'s offer");
-                }
+                selectedOffer = currentPlayer.getStrategy().selectOffer(availableOffers);
             }
             
-            playersWhoTookTurn.add(currentPlayer);
+            // Take a card from the selected offer
+            boolean takeFaceUp = currentPlayer.getStrategy().chooseCard(selectedOffer);
+            Card takenCard = selectedOffer.selectCard(takeFaceUp);
+            
+            if (takenCard != null) {
+                currentPlayer.getJest().addCard(takenCard);
+                System.out.println(currentPlayer.getName() + " took " + takenCard + 
+                    " from " + selectedOffer.getOwner().getName() + "'s offer.");
+            }
+            
+            playersWhoTook.add(currentPlayer);
+            
+            // Determine next player
+            Player offerOwner = selectedOffer.getOwner();
+            currentPlayer = findNextPlayer(offerOwner);
         }
     }
 
     /**
-     * Determines the order of play based on highest face-up card.
-     * Ties broken by suit strength (Spade > Club > Diamond > Heart).
+     * Gets available offers for a player to take from.
+     * - Must be complete (2 cards)
+     * - Must be from another player, UNLESS this is the final player and own offer is only complete one
+     * 
+     * @param player The player who wants to take
+     * @return List of available offers
      */
-    private void determineTurnOrder() {
-        turnOrder.clear();
+    private List<Offer> getAvailableOffersFor(Player player) {
+        List<Offer> available = new ArrayList<>();
+        List<Offer> completeOffers = new ArrayList<>();
         
-        List<Player> remainingPlayers = new ArrayList<>(players);
-        
-        while (!remainingPlayers.isEmpty()) {
-            Player nextPlayer = findPlayerWithHighestFaceUp(remainingPlayers);
-            if (nextPlayer != null) {
-                turnOrder.add(nextPlayer);
-                remainingPlayers.remove(nextPlayer);
-            } else {
-                turnOrder.addAll(remainingPlayers);
-                break;
+        // Find all complete offers from players who haven't taken yet
+        for (Offer offer : offers) {
+            if (offer.isComplete()) {
+                completeOffers.add(offer);
             }
         }
+        
+        // Check if this is the final player scenario
+        boolean isFinalPlayer = (playersWhoTook.size() == players.size() - 1);
+        boolean ownOfferIsOnlyComplete = false;
+        
+        if (isFinalPlayer && completeOffers.size() == 1 && 
+            completeOffers.get(0).getOwner() == player) {
+            ownOfferIsOnlyComplete = true;
+        }
+        
+        // Add offers from other players first
+        for (Offer offer : completeOffers) {
+            if (offer.getOwner() != player) {
+                available.add(offer);
+            }
+        }
+        
+        // If final player and own offer is the only complete one, add it
+        if (ownOfferIsOnlyComplete) {
+            for (Offer offer : completeOffers) {
+                if (offer.getOwner() == player) {
+                    available.add(offer);
+                }
+            }
+        }
+        
+        return available;
     }
 
     /**
-     * Finds the player with the highest face-up card value.
+     * Finds the next player to take a card.
+     * Priority: The player whose offer was taken from (if they haven't taken yet)
+     * Otherwise: Player with highest face-up card among remaining
+     * 
+     * @param offerOwner The player whose offer was just taken from
+     * @return The next player, or null if all have taken
+     */
+    private Player findNextPlayer(Player offerOwner) {
+        // If the offer owner hasn't taken yet, they go next
+        if (offerOwner != null && !playersWhoTook.contains(offerOwner)) {
+            return offerOwner;
+        }
+        
+        // Otherwise, find player with highest face-up among those who haven't taken
+        List<Player> remaining = new ArrayList<>();
+        for (Player p : players) {
+            if (!playersWhoTook.contains(p)) {
+                remaining.add(p);
+            }
+        }
+        
+        if (remaining.isEmpty()) {
+            return null;
+        }
+        
+        return findPlayerWithHighestFaceUp(remaining);
+    }
+
+    /**
+     * Finds players who still have complete offers.
+     * 
+     * @return List of players with complete offers
+     */
+    private List<Player> getPlayersWithCompleteOffers() {
+        List<Player> result = new ArrayList<>();
+        for (Offer offer : offers) {
+            if (offer.isComplete()) {
+                result.add(offer.getOwner());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Finds the player with the highest face-up card value among candidates.
+     * Ties broken by suit strength (Spade > Club > Diamond > Heart).
      * 
      * @param candidatePlayers Players to consider
      * @return The player with highest face-up card
@@ -156,28 +246,6 @@ public class Round {
         }
         
         return highestPlayer;
-    }
-
-    /**
-     * Gets offers available to a player.
-     * 
-     * @param currentPlayer The player taking
-     * @param playersWhoTookTurn Players who already took
-     * @return List of available offers
-     */
-    private List<Offer> getAvailableOffers(Player currentPlayer, List<Player> playersWhoTookTurn) {
-        List<Offer> available = new ArrayList<>();
-        
-        for (Offer offer : offers) {
-            if (offer.hasCards()) {
-                Player offerOwner = offer.getOwner();
-                if (!playersWhoTookTurn.contains(offerOwner) || offerOwner == currentPlayer) {
-                    available.add(offer);
-                }
-            }
-        }
-        
-        return available;
     }
 
     /**
@@ -240,24 +308,41 @@ public class Round {
     }
 
     /**
-     * Collects leftover cards into owners' Jests.
+     * Gets the remaining cards from all offers (for next round preparation).
+     * Does NOT add them to Jest - they stay on table.
+     * 
+     * @return List of remaining cards from offers
      */
-    public void collectLeftoverCards() {
+    public List<Card> getLeftoverCards() {
+        List<Card> leftovers = new ArrayList<>();
+        for (Offer offer : offers) {
+            Card remaining = offer.getRemainingCard();
+            if (remaining != null) {
+                leftovers.add(remaining);
+            }
+        }
+        return leftovers;
+    }
+
+    /**
+     * Collects leftover cards into owners' Jests.
+     * Only called in the FINAL round when deck is empty.
+     */
+    public void collectLeftoverCardsToJest() {
         for (Offer offer : offers) {
             Card remaining = offer.getRemainingCard();
             if (remaining != null && offer.getOwner() != null) {
                 offer.getOwner().getJest().addCard(remaining);
-                System.out.println(offer.getOwner().getName() + " added remaining card to Jest: " + remaining);
+                System.out.println(offer.getOwner().getName() + " added final card to Jest: " + remaining);
             }
         }
     }
 
     /**
-     * Prepares for the next round by clearing state.
+     * Prepares for the next round by clearing hands.
+     * Note: Offers are NOT cleared here - leftover cards handled by Game.
      */
     public void prepareNextRound() {
-        offers.clear();
-        turnOrder.clear();
         for (Player player : players) {
             player.clearHand();
         }
@@ -279,14 +364,5 @@ public class Round {
      */
     public void setOffers(List<Offer> offers) {
         this.offers = offers;
-    }
-
-    /**
-     * Gets the turn order.
-     * 
-     * @return List of players in turn order
-     */
-    public List<Player> getTurnOrder() {
-        return turnOrder;
     }
 }

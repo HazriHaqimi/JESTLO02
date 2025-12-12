@@ -10,12 +10,17 @@ import properties.Suit;
 import properties.Numbers;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * Main game controller for the JEST card game.
  * Manages players, deck, trophies, rounds, and scoring.
+ * 
+ * Game flow:
+ * 1. Setup: Initialize players, deck, draw trophy cards
+ * 2. Rounds: Deal 2 cards, make offers, take cards (repeat until deck empty)
+ * 3. Final: Collect remaining offer cards, award trophies to Jests, calculate scores
  * 
  * @author JEST Team
  * @version 1.0
@@ -33,23 +38,19 @@ public class Game {
     /** Number of players (3 or 4) */
     private int numberOfPlayers;
     
-    /** Scanner for user input */
-    private Scanner scanner;
-    
     /** Current round number */
     private int roundNumber;
+    
+    /** Cards remaining from previous round's offers */
+    private List<Card> previousRoundLeftovers;
 
     /**
      * Trophy types based on card conditions.
      */
     public enum TrophyType {
-        /** Player with highest card in a specific suit */
         HIGHEST_SPADE, HIGHEST_CLUB, HIGHEST_DIAMOND, HIGHEST_HEART,
-        /** Player with lowest card in a specific suit */
         LOWEST_SPADE, LOWEST_CLUB, LOWEST_DIAMOND, LOWEST_HEART,
-        /** Player with the Joker card */
         JOKER,
-        /** Player with most cards of a specific face value */
         MAJORITY_2, MAJORITY_3, MAJORITY_4
     }
 
@@ -62,8 +63,8 @@ public class Game {
         this.numberOfPlayers = numberOfPlayers;
         this.players = new ArrayList<>();
         this.trophies = new ArrayList<>();
-        this.scanner = new Scanner(System.in);
         this.roundNumber = 0;
+        this.previousRoundLeftovers = new ArrayList<>();
     }
 
     /**
@@ -77,16 +78,22 @@ public class Game {
         initializeDeck();
         setupTrophies();
         
-        System.out.println("\n=== Trophies for this game ===");
+        System.out.println("\n========================================");
+        System.out.println("         TROPHIES FOR THIS GAME");
+        System.out.println("========================================");
         for (Trophy trophy : trophies) {
-            System.out.println("- " + trophy.getCondition());
+            Card card = trophy.getTrophyCard();
+            System.out.println("Trophy Card: " + card);
+            System.out.println("  Condition: " + trophy.getCondition());
+            System.out.println("  (This card will be added to the winner's Jest)");
+            System.out.println();
         }
         
+        // Play rounds until deck is empty
         while (canPlayRound()) {
-            startRound();
+            playRound();
         }
         
-        collectFinalCards();
         endGame();
     }
 
@@ -96,15 +103,16 @@ public class Game {
      * @return true if deck has enough cards for all players
      */
     private boolean canPlayRound() {
-        return deck.size() >= numberOfPlayers * 2;
+        int availableCards = deck.size() + previousRoundLeftovers.size();
+        return availableCards >= numberOfPlayers * 2;
     }
 
     /**
      * Initializes players based on user input.
      */
     private void initializePlayers() {
-        System.out.println("\nEnter name for Human Player: ");
-        String humanName = scanner.nextLine();
+        System.out.print("\nEnter name for Human Player: ");
+        String humanName = InputHandler.getString();
         if (humanName.isEmpty()) humanName = "Player 1";
         players.add(new HumanPlayer(humanName));
         
@@ -142,7 +150,6 @@ public class Game {
                 Trophy trophy = createTrophyFromCard(trophyCard);
                 if (trophy != null) {
                     trophies.add(trophy);
-                    System.out.println("Trophy card drawn: " + trophyCard);
                 }
             }
         }
@@ -150,14 +157,13 @@ public class Game {
 
     /**
      * Creates a trophy based on the card's orange band condition.
-     * Each card has a specific trophy condition printed on it.
      * 
      * @param card The trophy card
      * @return Trophy with the appropriate condition
      */
     private Trophy createTrophyFromCard(Card card) {
         if (card instanceof JokerCard) {
-            return new Trophy("Lowest card value in strongest suit (1)", 
+            return new Trophy("Lowest value 1 card in strongest suit", 
                 TrophyType.JOKER, card);
         }
         
@@ -173,7 +179,7 @@ public class Game {
                         
                 case DIAMOND:
                     if (number == Numbers.ACE) {
-                        return new Trophy("Highest value 4 cards", 
+                        return new Trophy("Majority 4s - Player with most 4-value cards", 
                             TrophyType.MAJORITY_4, card);
                     } else if (number == Numbers.TWO) {
                         return new Trophy("Highest Heart - Player with highest Heart", 
@@ -189,7 +195,7 @@ public class Game {
                     
                 case CLUB:
                     if (number == Numbers.ACE) {
-                        return new Trophy("Highest value 4 cards", 
+                        return new Trophy("Majority 4s - Player with most 4-value cards", 
                             TrophyType.MAJORITY_4, card);
                     } else if (number == Numbers.TWO) {
                         return new Trophy("Lowest Heart - Player with lowest Heart", 
@@ -227,84 +233,142 @@ public class Game {
     /**
      * Plays a single round of the game.
      */
-    public void startRound() {
+    private void playRound() {
         roundNumber++;
-        System.out.println("\n========== ROUND " + roundNumber + " ==========");
-        Round round = new Round(deck, players);
+        System.out.println("\n========================================");
+        System.out.println("            ROUND " + roundNumber);
+        System.out.println("========================================");
         
-        round.dealCards();
-        System.out.println("Cards dealt to all players.");
+        // Prepare cards for this round
+        List<Card> roundCards = new ArrayList<>();
+        roundCards.addAll(previousRoundLeftovers);
+        previousRoundLeftovers.clear();
+        
+        int cardsNeeded = (numberOfPlayers * 2) - roundCards.size();
+        for (int i = 0; i < cardsNeeded && !deck.isEmpty(); i++) {
+            roundCards.add(deck.drawCard());
+        }
+        
+        Collections.shuffle(roundCards);
         
         for (Player player : players) {
-            if (player instanceof HumanPlayer) {
-                System.out.println(player.getName() + "'s hand: " + player.getHand());
-            } else {
-                System.out.println(player.getName() + "'s hand: [hidden]");
+            player.clearHand();
+            if (roundCards.size() >= 2) {
+                player.addCardToHand(roundCards.remove(0));
+                player.addCardToHand(roundCards.remove(0));
             }
         }
         
+        System.out.println("Cards dealt to all players.");
+        System.out.println("Remaining in deck: " + deck.size());
+        
+        Round round = new Round(deck, players);
         round.makeOffers();
-        System.out.println("\nOffers made by all players:");
+        
+        System.out.println("\n--- Offers Made ---");
         for (Offer offer : round.getOffers()) {
-            System.out.println(offer.getOwner().getName() + ": Face-up = " + offer.getFaceUp() + ", Face-down = [hidden]");
+            System.out.println("  " + offer.getOwner().getName() + ": Face-up = " + offer.getFaceUp());
         }
         
+        System.out.println("\n--- Taking Cards ---");
         round.takeOffers();
         
-        round.collectLeftoverCards();
-        
-        System.out.println("\nCurrent Jests:");
+        System.out.println("\n--- Current Jests ---");
         for (Player player : players) {
-            System.out.println(player.getName() + ": " + player.getJest().getCards());
+            System.out.println("  " + player.getName() + " (" + player.getJest().size() + " cards): " + 
+                player.getJest().getCards());
         }
         
-        round.prepareNextRound();
-    }
-
-    /**
-     * Collects final remaining cards at end of game.
-     */
-    private void collectFinalCards() {
-        System.out.println("\n=== Game Over - All rounds completed ===");
-    }
-
-    /**
-     * Computes and displays scores for all players.
-     */
-    public void computeScore() {
-        System.out.println("\n=== Final Scores ===");
-        for (Player player : players) {
-            FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
-            int score = player.calculateFinalScore(visitor);
-            System.out.println(player.getName() + "'s Jest: " + player.getJest().getCards());
-            System.out.println(player.getName() + "'s Score: " + score);
+        previousRoundLeftovers = round.getLeftoverCards();
+        System.out.println("\nCards remaining on table: " + previousRoundLeftovers);
+        
+        if (deck.isEmpty()) {
+            System.out.println("\n=== DECK EMPTY - FINAL COLLECTION ===");
+            for (Offer offer : round.getOffers()) {
+                Card remaining = offer.getRemainingCard();
+                if (remaining != null && offer.getOwner() != null) {
+                    offer.getOwner().getJest().addCard(remaining);
+                    System.out.println(offer.getOwner().getName() + " added final card: " + remaining);
+                }
+            }
+            previousRoundLeftovers.clear();
         }
     }
 
     /**
-     * Awards trophies to players based on conditions.
+     * Awards trophies to winners and adds trophy cards to their Jests.
+     * This happens BEFORE final scoring.
      */
-    public void awardTrophy() {
-        System.out.println("\n=== Awarding Trophies ===");
+    public void awardTrophies() {
+        System.out.println("\n========================================");
+        System.out.println("         AWARDING TROPHIES");
+        System.out.println("========================================");
+        System.out.println("(Trophy cards are added to winners' Jests)\n");
+        
         for (Trophy trophy : trophies) {
             Player winner = trophy.determineWinner(players);
             if (winner != null) {
                 trophy.setWinner(winner);
-                System.out.println(trophy.getCondition() + " -> " + winner.getName());
+                Card trophyCard = trophy.getTrophyCard();
+                
+                // Add the trophy card to the winner's Jest
+                winner.getJest().addCard(trophyCard);
+                
+                System.out.println("Trophy: " + trophy.getCondition());
+                System.out.println("  Winner: " + winner.getName());
+                System.out.println("  Card added to Jest: " + trophyCard);
+                System.out.println();
             } else {
-                System.out.println(trophy.getCondition() + " -> No winner");
+                System.out.println("Trophy: " + trophy.getCondition());
+                System.out.println("  No winner (condition not met)");
+                System.out.println();
             }
         }
     }
 
     /**
-     * Ends the game and determines the winner.
+     * Computes and displays final scores (after trophies are added).
+     */
+    public void computeFinalScores() {
+        System.out.println("\n========================================");
+        System.out.println("         FINAL JESTS & SCORES");
+        System.out.println("========================================");
+        
+        for (Player player : players) {
+            System.out.println("\n" + player.getName() + "'s Jest:");
+            System.out.println("  Cards: " + player.getJest().getCards());
+            
+            FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
+            int score = player.calculateFinalScore(visitor);
+            System.out.println("  Total Score: " + score + " points");
+        }
+    }
+
+    /**
+     * Ends the game - awards trophies, calculates scores, determines winner.
      */
     public void endGame() {
-        computeScore();
-        awardTrophy();
+        System.out.println("\n========================================");
+        System.out.println("           GAME OVER");
+        System.out.println("========================================");
         
-        System.out.println("\n=== Final Results ===");
+        // Show Jests before trophies
+        System.out.println("\nJests before trophy awards:");
+        for (Player player : players) {
+            System.out.println("  " + player.getName() + ": " + player.getJest().getCards());
+        }
+        
+        // Award trophies (adds trophy cards to Jests)
+        awardTrophies();
+        
+        // Calculate final scores (after trophies added)
+        computeFinalScores();
+        
+        // Determine winner
+        System.out.println("\n========================================");
+        System.out.println("           FINAL RESULTS");
+        System.out.println("========================================");
+        
         Player winner = null;
         int highestScore = Integer.MIN_VALUE;
         
@@ -312,7 +376,7 @@ public class Game {
             FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
             int score = player.calculateFinalScore(visitor);
             
-            System.out.println(player.getName() + ": Score = " + score);
+            System.out.println(player.getName() + ": " + score + " points");
             
             if (score > highestScore) {
                 highestScore = score;
@@ -323,31 +387,18 @@ public class Game {
         if (winner != null) {
             System.out.println("\n*** " + winner.getName() + " WINS with " + highestScore + " points! ***");
         }
+        
+        InputHandler.close();
     }
 
-    /**
-     * Gets the list of players.
-     * 
-     * @return List of players
-     */
     public List<Player> getPlayers() {
         return players;
     }
 
-    /**
-     * Gets the deck.
-     * 
-     * @return The deck
-     */
     public Deck getDeck() {
         return deck;
     }
 
-    /**
-     * Gets the list of trophies.
-     * 
-     * @return List of trophies
-     */
     public List<Trophy> getTrophies() {
         return trophies;
     }
