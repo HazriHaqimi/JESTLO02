@@ -1,17 +1,29 @@
 package base;
 
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
 
 /**
  * Singleton class to handle all console input.
- * Prevents multiple Scanner instances on System.in which causes conflicts.
- * 
+ * Uses BufferedReader for reliable input handling.
+ * hello
  * @author JEST Team
  * @version 1.0
  */
 public class InputHandler {
-    /** Single shared Scanner instance */
-    private static Scanner scanner = new Scanner(System.in);
+    /** BufferedReader for reliable input */
+    private static BufferedReader reader = null;
+    
+    /**
+     * Gets or creates the BufferedReader.
+     */
+    private static BufferedReader getReader() {
+        if (reader == null) {
+            reader = new BufferedReader(new InputStreamReader(System.in));
+        }
+        return reader;
+    }
     
     /**
      * Private constructor to prevent instantiation.
@@ -21,22 +33,39 @@ public class InputHandler {
     
     /**
      * Gets integer input from the user.
-     * Waits for valid integer input.
+     * Blocks until valid integer input is received.
      * 
      * @return The integer entered by user
      */
     public static int getInt() {
-        while (true) {
-            try {
-                if (scanner.hasNextLine()) {
-                    String line = scanner.nextLine().trim();
-                    if (!line.isEmpty()) {
-                        return Integer.parseInt(line);
-                    }
+        System.out.flush();
+        try {
+            while (true) {
+                String line = getReader().readLine();
+                
+                if (line == null) {
+                    System.out.println("[DEBUG] readLine returned null");
+                    return 0;
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number.");
+                
+                line = line.trim();
+                
+                if (line.isEmpty()) {
+                    System.out.println("[DEBUG] Empty line received, waiting for input...");
+                    continue;
+                }
+                
+                try {
+                    int value = Integer.parseInt(line);
+                    return value;
+                } catch (NumberFormatException e) {
+                    System.out.print("Invalid number. Please enter a number: ");
+                    System.out.flush();
+                }
             }
+        } catch (IOException e) {
+            System.out.println("[DEBUG] IOException: " + e.getMessage());
+            return 0;
         }
     }
     
@@ -46,16 +75,25 @@ public class InputHandler {
      * @return The line entered by user
      */
     public static String getString() {
-        if (scanner.hasNextLine()) {
-            return scanner.nextLine();
+        System.out.flush();
+        try {
+            String line = getReader().readLine();
+            return (line != null) ? line : "";
+        } catch (IOException e) {
+            return "";
         }
-        return "";
     }
     
     /**
-     * Closes the scanner (call at end of program).
+     * Closes the reader (call at end of program).
      */
     public static void close() {
-        scanner.close();
+        if (reader != null) {
+            try {
+                reader.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
     }
 }
