@@ -10,7 +10,7 @@
  * 
  * <p>Concrete AI strategies are in the {@link strategy.typestrategy} subpackage.</p>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package strategy;

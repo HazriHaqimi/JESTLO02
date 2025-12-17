@@ -7,7 +7,7 @@
  *   <li>{@link strategy.typestrategy.DefensiveStrategy} - Cautious, low-risk strategy</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package strategy.typestrategy;

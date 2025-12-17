@@ -7,7 +7,7 @@
  *   <li>{@link card.JokerCard} - The special Joker card</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package card;

@@ -12,7 +12,7 @@ import java.util.List;
  * At end of round, each player has taken exactly 1 card to their Jest.
  * Remaining offer cards stay on table until next round or final collection.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Round {

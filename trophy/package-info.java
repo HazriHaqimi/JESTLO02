@@ -13,7 +13,7 @@
  *   <li>Player with most cards of a face value (Majority)</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package trophy;

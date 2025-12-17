@@ -11,7 +11,7 @@ import java.util.List;
  * Defensive AI strategy for virtual players.
  * Prioritizes hiding high-value cards and being cautious.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class DefensiveStrategy extends AIStrategy {

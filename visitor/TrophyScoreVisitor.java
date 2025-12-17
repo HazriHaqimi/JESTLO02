@@ -12,7 +12,7 @@ import java.util.Map;
  * Visitor for tracking card information relevant to trophy conditions.
  * Tracks highest/lowest cards per suit and Joker presence.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class TrophyScoreVisitor implements ScoreVisitor {

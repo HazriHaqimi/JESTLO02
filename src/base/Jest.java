@@ -8,7 +8,7 @@ import java.util.List;
  * Represents a player's Jest (collection of won cards).
  * The Jest accumulates cards throughout the game and is scored at the end.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Jest {

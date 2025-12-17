@@ -9,7 +9,7 @@ import visitor.ScoreVisitor;
  * Represents a suit card in the JEST game.
  * Suit cards have a suit (Spade, Club, Diamond, Heart) and a number (Ace, 2, 3, 4).
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class SuitCard extends Card {

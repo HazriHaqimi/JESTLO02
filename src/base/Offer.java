@@ -5,7 +5,7 @@ package base;
  * An offer consists of two cards: one face-up (visible) and one face-down (hidden).
  * Other players can take one card from an offer.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Offer {

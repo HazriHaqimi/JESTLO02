@@ -9,7 +9,7 @@ import java.util.Random;
  * Abstract base class for AI player strategies.
  * Provides common functionality for automated decision-making.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public abstract class AIStrategy implements PlayStrategy {

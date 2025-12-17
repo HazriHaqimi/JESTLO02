@@ -10,7 +10,7 @@
  *   <li>{@link visitor.TrophyScoreVisitor} - Trophy-related card tracking</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package visitor;

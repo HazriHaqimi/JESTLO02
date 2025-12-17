@@ -12,7 +12,7 @@ import java.util.Random;
  * Represents an AI-controlled player in the JEST game.
  * Virtual players make automatic decisions using AI strategies.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class VirtualPlayer extends Player {

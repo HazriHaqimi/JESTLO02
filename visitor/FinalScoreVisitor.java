@@ -20,7 +20,7 @@ import java.util.Set;
  * - Black pairs (same value Spade + Club) add 2 bonus
  * - Joker value depends on number of Hearts
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class FinalScoreVisitor implements ScoreVisitor {
