@@ -7,7 +7,7 @@ import card.JokerCard;
  * Visitor interface for calculating scores.
  * Implements the Visitor design pattern for card scoring.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public interface ScoreVisitor {

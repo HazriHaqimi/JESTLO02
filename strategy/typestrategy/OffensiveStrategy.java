@@ -11,7 +11,7 @@ import java.util.List;
  * Offensive AI strategy for virtual players.
  * Prioritizes showing high-value cards and taking high-value cards.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class OffensiveStrategy extends AIStrategy {

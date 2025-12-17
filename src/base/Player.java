@@ -9,7 +9,7 @@ import java.util.List;
  * Abstract base class representing a player in the JEST game.
  * Players have a hand of cards, a Jest (collection of won cards), and a strategy.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public abstract class Player {

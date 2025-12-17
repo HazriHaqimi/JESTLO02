@@ -12,7 +12,7 @@ import java.util.List;
  * Represents the deck of cards used in the JEST game.
  * Contains 16 suit cards (4 suits x 4 values) plus 1 Joker = 17 cards total.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Deck {

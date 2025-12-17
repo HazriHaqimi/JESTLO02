@@ -8,7 +8,7 @@ import java.util.List;
  * Interface for player decision-making strategies.
  * Implements the Strategy design pattern for flexible player behavior.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public interface PlayStrategy {

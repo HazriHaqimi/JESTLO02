@@ -15,7 +15,7 @@ import java.util.Map;
  * Represents a trophy in the JEST game.
  * Trophies are awarded based on specific conditions met by players' Jests.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Trophy {

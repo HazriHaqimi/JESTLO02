@@ -3,13 +3,13 @@ import base.InputHandler;
 
 /**
  * Main entry point for the JEST card game.
- * Handles game initialization and player setup.
+ * Handles game initialization, player setup, and AI difficulty selection.
  * 
  * <p>JEST is a card game for 3-4 players where players collect cards
  * to build the highest-scoring Jest. The game uses 17 cards (16 suit cards
  * plus 1 Joker) and awards trophies based on various conditions.</p>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Main {
@@ -33,17 +33,50 @@ public class Main {
         System.out.println("- Build the highest-scoring Jest!");
         System.out.println();
         
-        int numberOfPlayers = 0;
-        while (numberOfPlayers < 3 || numberOfPlayers > 4) {
-            System.out.print("Enter number of players (3 or 4): ");
-            numberOfPlayers = InputHandler.getInt();
+        // Get total number of players
+        int totalPlayers = 0;
+        while (totalPlayers < 3 || totalPlayers > 4) {
+            System.out.print("Enter total number of players (3 or 4): ");
+            totalPlayers = InputHandler.getInt();
             
-            if (numberOfPlayers < 3 || numberOfPlayers > 4) {
+            if (totalPlayers < 3 || totalPlayers > 4) {
                 System.out.println("Invalid number. Please enter 3 or 4.");
             }
         }
         
-        Game game = new Game(numberOfPlayers);
+        // Get number of human players
+        int humanPlayers = 0;
+        while (humanPlayers < 1 || humanPlayers > totalPlayers) {
+            System.out.print("Enter number of HUMAN players (1 to " + totalPlayers + "): ");
+            humanPlayers = InputHandler.getInt();
+            
+            if (humanPlayers < 1 || humanPlayers > totalPlayers) {
+                System.out.println("Invalid number. Please enter 1 to " + totalPlayers + ".");
+            }
+        }
+        
+        int aiPlayers = totalPlayers - humanPlayers;
+        
+        // Get AI difficulty if there are AI players
+        int aiDifficulty = 0;
+        if (aiPlayers > 0) {
+            System.out.println("\nAI Difficulty Options:");
+            System.out.println("  1 = Defensive (AI hides high cards, takes low cards)");
+            System.out.println("  2 = Offensive (AI shows high cards, takes high cards)");
+            System.out.println("  3 = Mixed (random strategy per AI)");
+            
+            while (aiDifficulty < 1 || aiDifficulty > 3) {
+                System.out.print("Choose AI difficulty (1, 2, or 3): ");
+                aiDifficulty = InputHandler.getInt();
+                
+                if (aiDifficulty < 1 || aiDifficulty > 3) {
+                    System.out.println("Invalid choice. Please enter 1, 2, or 3.");
+                }
+            }
+        }
+        
+        // Create and start game
+        Game game = new Game(totalPlayers, humanPlayers, aiDifficulty);
         game.startGame();
         
         System.out.println("\nThank you for playing JEST!");

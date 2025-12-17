@@ -4,7 +4,7 @@ package properties;
  * Enumeration of card numbers/values in the JEST game.
  * Each card has a face value from 1 (Ace) to 4.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public enum Numbers {

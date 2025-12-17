@@ -8,6 +8,8 @@ import card.SuitCard;
 import card.JokerCard;
 import properties.Suit;
 import properties.Numbers;
+import strategy.typestrategy.DefensiveStrategy;
+import strategy.typestrategy.OffensiveStrategy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,12 +19,14 @@ import java.util.List;
  * Main game controller for the JEST card game.
  * Manages players, deck, trophies, rounds, and scoring.
  * 
- * Game flow:
- * 1. Setup: Initialize players, deck, draw trophy cards
- * 2. Rounds: Deal 2 cards, make offers, take cards (repeat until deck empty)
- * 3. Final: Collect remaining offer cards, award trophies to Jests, calculate scores
+ * <p>Game flow:</p>
+ * <ol>
+ *   <li>Setup: Initialize players (human and AI), deck, draw trophy cards</li>
+ *   <li>Rounds: Deal 2 cards, make offers, take cards (repeat until deck empty)</li>
+ *   <li>Final: Collect remaining offer cards, award trophies to Jests, calculate scores</li>
+ * </ol>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class Game {
@@ -35,8 +39,14 @@ public class Game {
     /** List of trophies for this game (1 for 4 players, 2 for 3 players) */
     private List<Trophy> trophies;
     
-    /** Number of players (3 or 4) */
+    /** Total number of players (3 or 4) */
     private int numberOfPlayers;
+    
+    /** Number of human players */
+    private int numberOfHumans;
+    
+    /** AI difficulty setting (1=Defensive, 2=Offensive, 3=Mixed) */
+    private int aiDifficulty;
     
     /** Current round number */
     private int roundNumber;
@@ -55,12 +65,16 @@ public class Game {
     }
 
     /**
-     * Creates a new game with the specified number of players.
+     * Creates a new game with the specified player configuration.
      * 
-     * @param numberOfPlayers Number of players (3 or 4)
+     * @param numberOfPlayers Total number of players (3 or 4)
+     * @param numberOfHumans Number of human players (1 to numberOfPlayers)
+     * @param aiDifficulty AI difficulty (1=Defensive, 2=Offensive, 3=Mixed)
      */
-    public Game(int numberOfPlayers) {
+    public Game(int numberOfPlayers, int numberOfHumans, int aiDifficulty) {
         this.numberOfPlayers = numberOfPlayers;
+        this.numberOfHumans = numberOfHumans;
+        this.aiDifficulty = aiDifficulty;
         this.players = new ArrayList<>();
         this.trophies = new ArrayList<>();
         this.roundNumber = 0;
@@ -71,8 +85,10 @@ public class Game {
      * Starts and runs the complete game.
      */
     public void startGame() {
-        System.out.println("=== JEST Card Game ===");
-        System.out.println("Number of players: " + numberOfPlayers);
+        System.out.println("\n=== JEST Card Game ===");
+        System.out.println("Total players: " + numberOfPlayers);
+        System.out.println("Human players: " + numberOfHumans);
+        System.out.println("AI players: " + (numberOfPlayers - numberOfHumans));
         
         initializePlayers();
         initializeDeck();
@@ -108,21 +124,50 @@ public class Game {
     }
 
     /**
-     * Initializes players based on user input.
+     * Initializes players - humans first, then AIs with chosen difficulty.
      */
     private void initializePlayers() {
-        System.out.print("\nEnter name for Human Player: ");
-        String humanName = InputHandler.getString();
-        if (humanName.isEmpty()) humanName = "Player 1";
-        players.add(new HumanPlayer(humanName));
-        
-        for (int i = 2; i <= numberOfPlayers; i++) {
-            players.add(new VirtualPlayer("AI Player " + i));
+        // Create human players
+        for (int i = 1; i <= numberOfHumans; i++) {
+            System.out.print("\nEnter name for Human Player " + i + ": ");
+            String name = InputHandler.getString();
+            if (name.isEmpty()) name = "Human " + i;
+            players.add(new HumanPlayer(name));
         }
         
-        System.out.println("\nPlayers:");
+        // Create AI players with selected difficulty
+        int aiCount = numberOfPlayers - numberOfHumans;
+        for (int i = 1; i <= aiCount; i++) {
+            String aiName = "AI Player " + i;
+            VirtualPlayer ai;
+            
+            switch (aiDifficulty) {
+                case 1: // Defensive
+                    ai = new VirtualPlayer(aiName, new DefensiveStrategy());
+                    System.out.println("Created " + aiName + " (Defensive)");
+                    break;
+                case 2: // Offensive
+                    ai = new VirtualPlayer(aiName, new OffensiveStrategy());
+                    System.out.println("Created " + aiName + " (Offensive)");
+                    break;
+                case 3: // Mixed - alternate or random
+                default:
+                    if (i % 2 == 0) {
+                        ai = new VirtualPlayer(aiName, new OffensiveStrategy());
+                        System.out.println("Created " + aiName + " (Offensive)");
+                    } else {
+                        ai = new VirtualPlayer(aiName, new DefensiveStrategy());
+                        System.out.println("Created " + aiName + " (Defensive)");
+                    }
+                    break;
+            }
+            players.add(ai);
+        }
+        
+        System.out.println("\nPlayers in game:");
         for (Player p : players) {
-            System.out.println("- " + p.getName());
+            String type = (p instanceof HumanPlayer) ? "Human" : "AI";
+            System.out.println("  - " + p.getName() + " (" + type + ")");
         }
     }
 
@@ -297,7 +342,6 @@ public class Game {
 
     /**
      * Awards trophies to winners and adds trophy cards to their Jests.
-     * This happens BEFORE final scoring.
      */
     public void awardTrophies() {
         System.out.println("\n========================================");
@@ -310,8 +354,6 @@ public class Game {
             if (winner != null) {
                 trophy.setWinner(winner);
                 Card trophyCard = trophy.getTrophyCard();
-                
-                // Add the trophy card to the winner's Jest
                 winner.getJest().addCard(trophyCard);
                 
                 System.out.println("Trophy: " + trophy.getCondition());
@@ -327,7 +369,7 @@ public class Game {
     }
 
     /**
-     * Computes and displays final scores (after trophies are added).
+     * Computes and displays final scores.
      */
     public void computeFinalScores() {
         System.out.println("\n========================================");
@@ -352,19 +394,14 @@ public class Game {
         System.out.println("           GAME OVER");
         System.out.println("========================================");
         
-        // Show Jests before trophies
         System.out.println("\nJests before trophy awards:");
         for (Player player : players) {
             System.out.println("  " + player.getName() + ": " + player.getJest().getCards());
         }
         
-        // Award trophies (adds trophy cards to Jests)
         awardTrophies();
-        
-        // Calculate final scores (after trophies added)
         computeFinalScores();
         
-        // Determine winner
         System.out.println("\n========================================");
         System.out.println("           FINAL RESULTS");
         System.out.println("========================================");

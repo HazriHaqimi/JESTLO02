@@ -12,7 +12,7 @@
  *   <li>{@link base.Round} - Single round logic</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package base;

@@ -7,7 +7,7 @@ import visitor.ScoreVisitor;
  * Represents the Joker card in the JEST game.
  * The Joker has special scoring rules that depend on the number of Hearts in the Jest.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class JokerCard extends Card {

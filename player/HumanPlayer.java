@@ -9,7 +9,7 @@ import strategy.HumanStrategy;
  * Represents a human player in the JEST game.
  * Human players make decisions through console input.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class HumanPlayer extends Player {

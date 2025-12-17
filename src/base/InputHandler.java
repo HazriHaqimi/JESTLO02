@@ -7,8 +7,8 @@ import java.io.IOException;
 /**
  * Singleton class to handle all console input.
  * Uses BufferedReader for reliable input handling.
- * 
- * @author JEST Team
+ * hello
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class InputHandler {

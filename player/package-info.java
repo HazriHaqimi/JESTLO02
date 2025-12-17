@@ -7,7 +7,7 @@
  *   <li>{@link player.VirtualPlayer} - AI-controlled player with automatic decisions</li>
  * </ul>
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 package player;

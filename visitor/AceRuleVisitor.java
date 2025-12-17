@@ -10,7 +10,7 @@ import java.util.Map;
  * Visitor for applying the Ace scoring rule.
  * An Ace becomes worth 5 points if it's the only card of its suit in the Jest.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class AceRuleVisitor implements ScoreVisitor {

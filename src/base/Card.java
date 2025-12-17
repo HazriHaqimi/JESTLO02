@@ -6,7 +6,7 @@ import visitor.ScoreVisitor;
  * Abstract base class representing a card in the JEST game.
  * Cards can be either suit cards (Spade, Club, Diamond, Heart) or the Joker.
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public abstract class Card {

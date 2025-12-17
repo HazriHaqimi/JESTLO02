@@ -11,7 +11,7 @@ import properties.Suit;
  * - 1-3 Hearts: Joker is worth 0, Hearts reduce score
  * - 4 Hearts: Joker is worth 0, but Hearts add their values
  * 
- * @author JEST Team
+ * @author Hazri and Sophea
  * @version 1.0
  */
 public class JokerRuleVisitor implements ScoreVisitor {
