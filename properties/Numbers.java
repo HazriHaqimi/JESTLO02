@@ -3,6 +3,7 @@ package properties;
 /**
  * Enumeration of card numbers/values in the JEST game.
  * Each card has a face value from 1 (Ace) to 4.
+ * Extension cards can add 6, 7, 8, 9 (only with expansion enabled).
  * 
  * @author Hazri and Sophea
  * @version 1.0
@@ -18,7 +19,19 @@ public enum Numbers {
     THREE(3),
     
     /** Four - value 4 */
-    FOUR(4);
+    FOUR(4),
+    
+    /** Six - value 6 (expansion card) */
+    SIX(6),
+    
+    /** Seven - value 7 (expansion card) */
+    SEVEN(7),
+    
+    /** Eight - value 8 (expansion card) */
+    EIGHT(8),
+    
+    /** Nine - value 9 (expansion card) */
+    NINE(9);
 
     /** The face value of this number */
     private final int value;
