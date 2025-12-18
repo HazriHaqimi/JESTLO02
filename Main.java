@@ -1,13 +1,15 @@
 import base.Game;
 import base.InputHandler;
+import base.GameConfig;
+import base.GameVariant;
 
 /**
  * Main entry point for the JEST card game.
- * Handles game initialization, player setup, and AI difficulty selection.
+ * Handles game initialization, player setup, AI difficulty, expansion cards, and variant selection.
  * 
  * <p>JEST is a card game for 3-4 players where players collect cards
- * to build the highest-scoring Jest. The game uses 17 cards (16 suit cards
- * plus 1 Joker) and awards trophies based on various conditions.</p>
+ * to build the highest-scoring Jest. The game supports multiple variants
+ * (Normal, No Mercy, Go All Out) and optional expansion cards (6, 7, 8, 9).</p>
  * 
  * @author Hazri and Sophea
  * @version 1.0
@@ -16,6 +18,7 @@ public class Main {
     
     /**
      * Main method - starts the JEST game.
+     * Prompts for all configuration options before starting.
      * 
      * @param args Command line arguments (not used)
      */
@@ -75,8 +78,68 @@ public class Main {
             }
         }
         
+        // Get expansion card preference
+        System.out.println("\n========================================");
+        System.out.println("     EXPANSION CARDS");
+        System.out.println("========================================");
+        System.out.println("Base deck: Ace, 2, 3, 4 in each suit (16 cards + Joker = 17 total)");
+        System.out.println("Expansion: Adds 6, 7, 8, 9 in each suit (32 cards + Joker = 33 total)");
+        
+        int expansionChoice = 0;
+        while (expansionChoice < 1 || expansionChoice > 2) {
+            System.out.print("Use expansion cards? (1 = No, 2 = Yes): ");
+            expansionChoice = InputHandler.getInt();
+            
+            if (expansionChoice < 1 || expansionChoice > 2) {
+                System.out.println("Invalid choice. Please enter 1 or 2.");
+            }
+        }
+        boolean useExpansion = (expansionChoice == 2);
+        
+        // Get game variant
+        System.out.println("\n========================================");
+        System.out.println("     GAME VARIANTS");
+        System.out.println("========================================");
+        System.out.println("1 = NORMAL MODE");
+        System.out.println("    Standard rules: Spades/Clubs add, Diamonds subtract");
+        System.out.println();
+        System.out.println("2 = NO MERCY");
+        System.out.println("    Jest value reset to 0 if exceeds random threshold (7-10)");
+        System.out.println();
+        System.out.println("3 = GO ALL OUT");
+        System.out.println("    No trophies! All cards add value. Joker multiplies by 1.5");
+        System.out.println();
+        
+        int variantChoice = 0;
+        while (variantChoice < 1 || variantChoice > 3) {
+            System.out.print("Choose a variant (1, 2, or 3): ");
+            variantChoice = InputHandler.getInt();
+            
+            if (variantChoice < 1 || variantChoice > 3) {
+                System.out.println("Invalid choice. Please enter 1, 2, or 3.");
+            }
+        }
+        
+        GameVariant selectedVariant;
+        switch (variantChoice) {
+            case 1:
+                selectedVariant = GameVariant.NORMAL;
+                break;
+            case 2:
+                selectedVariant = GameVariant.NO_MERCY;
+                break;
+            case 3:
+                selectedVariant = GameVariant.GO_ALL_OUT;
+                break;
+            default:
+                selectedVariant = GameVariant.NORMAL;
+        }
+        
+        // Create game configuration
+        GameConfig gameConfig = new GameConfig(useExpansion, selectedVariant);
+        
         // Create and start game
-        Game game = new Game(totalPlayers, humanPlayers, aiDifficulty);
+        Game game = new Game(totalPlayers, humanPlayers, aiDifficulty, gameConfig);
         game.startGame();
         
         System.out.println("\nThank you for playing JEST!");

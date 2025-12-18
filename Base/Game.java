@@ -1,7 +1,10 @@
 package base;
 
 import trophy.Trophy;
+import visitor.ScoreVisitor;
 import visitor.FinalScoreVisitor;
+import visitor.NoMercyScoreVisitor;
+import visitor.GoAllOutScoreVisitor;
 import player.HumanPlayer;
 import player.VirtualPlayer;
 import card.SuitCard;
@@ -17,7 +20,7 @@ import java.util.List;
 
 /**
  * Main game controller for the JEST card game.
- * Manages players, deck, trophies, rounds, and scoring.
+ * Manages players, deck, trophies, rounds, scoring, and game variants.
  * 
  * <p>Game flow:</p>
  * <ol>
@@ -25,6 +28,13 @@ import java.util.List;
  *   <li>Rounds: Deal 2 cards, make offers, take cards (repeat until deck empty)</li>
  *   <li>Final: Collect remaining offer cards, award trophies to Jests, calculate scores</li>
  * </ol>
+ * 
+ * <p>Supports game variants:</p>
+ * <ul>
+ *   <li>NORMAL: Standard rules</li>
+ *   <li>NO_MERCY: Jest value reset to 0 if exceeds random threshold (7-10)</li>
+ *   <li>GO_ALL_OUT: No trophies, all cards add value, Joker multiplies by 1.5</li>
+ * </ul>
  * 
  * @author Hazri and Sophea
  * @version 1.0
@@ -38,6 +48,9 @@ public class Game {
     
     /** List of trophies for this game (1 for 4 players, 2 for 3 players) */
     private List<Trophy> trophies;
+    
+    /** Game configuration (expansion cards, variant, etc.) */
+    private GameConfig gameConfig;
     
     /** Total number of players (3 or 4) */
     private int numberOfPlayers;
@@ -65,20 +78,33 @@ public class Game {
     }
 
     /**
-     * Creates a new game with the specified player configuration.
+     * Creates a new game with the specified player configuration and game config.
+     * 
+     * @param numberOfPlayers Total number of players (3 or 4)
+     * @param numberOfHumans Number of human players (1 to numberOfPlayers)
+     * @param aiDifficulty AI difficulty (1=Defensive, 2=Offensive, 3=Mixed)
+     * @param gameConfig Configuration for expansion and variant settings
+     */
+    public Game(int numberOfPlayers, int numberOfHumans, int aiDifficulty, GameConfig gameConfig) {
+        this.numberOfPlayers = numberOfPlayers;
+        this.numberOfHumans = numberOfHumans;
+        this.aiDifficulty = aiDifficulty;
+        this.gameConfig = gameConfig;
+        this.players = new ArrayList<>();
+        this.trophies = new ArrayList<>();
+        this.roundNumber = 0;
+        this.previousRoundLeftovers = new ArrayList<>();
+    }
+    
+    /**
+     * Creates a new game with default game config (no expansion, normal variant).
      * 
      * @param numberOfPlayers Total number of players (3 or 4)
      * @param numberOfHumans Number of human players (1 to numberOfPlayers)
      * @param aiDifficulty AI difficulty (1=Defensive, 2=Offensive, 3=Mixed)
      */
     public Game(int numberOfPlayers, int numberOfHumans, int aiDifficulty) {
-        this.numberOfPlayers = numberOfPlayers;
-        this.numberOfHumans = numberOfHumans;
-        this.aiDifficulty = aiDifficulty;
-        this.players = new ArrayList<>();
-        this.trophies = new ArrayList<>();
-        this.roundNumber = 0;
-        this.previousRoundLeftovers = new ArrayList<>();
+        this(numberOfPlayers, numberOfHumans, aiDifficulty, new GameConfig());
     }
 
     /**
@@ -89,10 +115,17 @@ public class Game {
         System.out.println("Total players: " + numberOfPlayers);
         System.out.println("Human players: " + numberOfHumans);
         System.out.println("AI players: " + (numberOfPlayers - numberOfHumans));
+        System.out.println();
+        System.out.println(gameConfig.toString());
+        System.out.println();
         
         initializePlayers();
         initializeDeck();
-        setupTrophies();
+        
+        // Skip trophies in GO_ALL_OUT variant
+        if (gameConfig.getVariant() != GameVariant.GO_ALL_OUT) {
+            setupTrophies();
+        }
         
         System.out.println("\n========================================");
         System.out.println("         TROPHIES FOR THIS GAME");
@@ -173,11 +206,15 @@ public class Game {
 
     /**
      * Initializes and shuffles the deck.
+     * Uses expansion cards if enabled in game config.
      */
     private void initializeDeck() {
-        deck = new Deck();
+        deck = new Deck(gameConfig.isExpansionEnabled());
         deck.shuffle();
-        System.out.println("\nDeck shuffled. " + deck.size() + " cards ready.");
+        System.out.println("Deck shuffled. " + deck.size() + " cards ready.");
+        if (gameConfig.isExpansionEnabled()) {
+            System.out.println("  (Expansion cards enabled: 6, 7, 8, 9)");
+        }
     }
 
     /**
@@ -369,25 +406,55 @@ public class Game {
     }
 
     /**
-     * Computes and displays final scores.
+     * Computes and displays final scores using the appropriate visitor for the variant.
      */
     public void computeFinalScores() {
         System.out.println("\n========================================");
         System.out.println("         FINAL JESTS & SCORES");
         System.out.println("========================================");
         
+        if (gameConfig.getVariant() == GameVariant.NO_MERCY) {
+            System.out.println("NO MERCY Variant - Threshold: " + gameConfig.getNoMercyThreshold());
+            System.out.println("Jest values exceeding threshold will be reset to 0!\n");
+        } else if (gameConfig.getVariant() == GameVariant.GO_ALL_OUT) {
+            System.out.println("GO ALL OUT Variant - All cards add value, Joker multiplies by 1.5\n");
+        }
+        
         for (Player player : players) {
             System.out.println("\n" + player.getName() + "'s Jest:");
             System.out.println("  Cards: " + player.getJest().getCards());
             
-            FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
+            ScoreVisitor visitor = createScoreVisitor(player.getJest());
             int score = player.calculateFinalScore(visitor);
+            
+            if (gameConfig.getVariant() == GameVariant.NO_MERCY && 
+                gameConfig.exceedsNoMercyThreshold(score)) {
+                System.out.println("  Score EXCEEDED threshold! -> 0 points (NO MERCY!)");
+            }
             System.out.println("  Total Score: " + score + " points");
+        }
+    }
+    
+    /**
+     * Creates the appropriate score visitor based on the game variant.
+     * 
+     * @param jest The Jest to score
+     * @return The appropriate ScoreVisitor for the current variant
+     */
+    private ScoreVisitor createScoreVisitor(Jest jest) {
+        switch (gameConfig.getVariant()) {
+            case NO_MERCY:
+                return new NoMercyScoreVisitor(jest, gameConfig);
+            case GO_ALL_OUT:
+                return new GoAllOutScoreVisitor(jest);
+            case NORMAL:
+            default:
+                return new FinalScoreVisitor(jest);
         }
     }
 
     /**
-     * Ends the game - awards trophies, calculates scores, determines winner.
+     * Ends the game - awards trophies (if applicable), calculates scores, determines winner.
      */
     public void endGame() {
         System.out.println("\n========================================");
@@ -399,7 +466,13 @@ public class Game {
             System.out.println("  " + player.getName() + ": " + player.getJest().getCards());
         }
         
-        awardTrophies();
+        // Award trophies only in NORMAL and NO_MERCY variants
+        if (gameConfig.getVariant() != GameVariant.GO_ALL_OUT) {
+            awardTrophies();
+        } else {
+            System.out.println("\n(No trophies awarded in GO ALL OUT variant)");
+        }
+        
         computeFinalScores();
         
         System.out.println("\n========================================");
@@ -410,7 +483,7 @@ public class Game {
         int highestScore = Integer.MIN_VALUE;
         
         for (Player player : players) {
-            FinalScoreVisitor visitor = new FinalScoreVisitor(player.getJest());
+            ScoreVisitor visitor = createScoreVisitor(player.getJest());
             int score = player.calculateFinalScore(visitor);
             
             System.out.println(player.getName() + ": " + score + " points");
@@ -438,5 +511,14 @@ public class Game {
 
     public List<Trophy> getTrophies() {
         return trophies;
+    }
+
+    /**
+     * Gets the game configuration.
+     * 
+     * @return The game configuration
+     */
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
 }
